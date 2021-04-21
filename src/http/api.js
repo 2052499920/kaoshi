@@ -265,7 +265,7 @@ export default {
   },
 
   //考务管理
-  addPlan({ planName, jobId, level, candidatesNumber, startTime, endTime, duration, remarks }) {  //编辑保存计划
+  addPlan({ planName, jobId, level, candidatesNumber, startTime, endTime, duration, remarks, id }) {  //编辑保存计划
     return http.post('/plan/addPlan', {
       planName: planName, //计划名称
       jobId: jobId, //考试职业
@@ -275,6 +275,7 @@ export default {
       endTime: endTime, //结束考试时间
       duration: duration, //考试时长
       remarks: remarks, // 备注
+      id: id // 编辑时上传
     })
   },
   getQueryPlan({ search, status, pageNo, pageSize }) {  //查询计划列表
@@ -283,9 +284,13 @@ export default {
   delPlan(ids) {  //删除计划
     return http.post('/plan/delPlan', ids)
   },
-  cancelPlan(id){  //撤销计划 计划作废
-return http.post('/plan/cancelPlan',{
-  id:id
-})
+  cancelPlan(id) {  //撤销计划 计划作废
+    return http.get(`/plan/cancelPlan?id=${id}`)
+  },
+  getPlanById(id) {  //查询编辑页面
+    return http.get(`/plan/findPlanById?id=${id}`)
+  },
+  reSubmitPlan(id) {  //重新提交计划
+    return http.get(`/plan/reSubmitPlan?id=${id}`)
   }
 }

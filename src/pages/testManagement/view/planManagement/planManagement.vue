@@ -44,6 +44,9 @@
 
     <div class="tab_box">
       <el-table ref="multipleTable" :data="tableData.rows" style="width: 100%">
+        <el-table-column label="计划计划" align="center">
+          <template slot-scope="scope">{{ scope.row.planName }}</template>
+        </el-table-column>
         <el-table-column label="计划名称" align="center">
           <template slot-scope="scope">{{ scope.row.planName }}</template>
         </el-table-column>
@@ -67,7 +70,21 @@
           }}</template>
         </el-table-column>
         <el-table-column label="状态" align="center">
-          <template slot-scope="scope">{{ scope.row.statu }}</template>
+          <template slot-scope="scope">
+            <div v-if="scope.row.status == 2">
+              <div @mouseover="onmouseover(scope.row)">
+                <el-tooltip
+                  effect="light"
+                  class="item"
+                  :content="tooltipText"
+                  placement="bottom-start"
+                >
+                  <div class="statu">{{ scope.row.statu }}</div>
+                </el-tooltip>
+              </div>
+            </div>
+            <div v-else>{{ scope.row.statu }}</div>
+          </template>
         </el-table-column>
         <el-table-column label="创建时间" align="center">
           <template slot-scope="scope">{{ scope.row.createTime }}</template>
@@ -130,6 +147,7 @@
         </el-pagination>
       </div>
 
+      <!-- 创建计划-->
       <div>
         <el-dialog
           title="创建计划"
@@ -258,6 +276,135 @@
           </div>
         </el-dialog>
       </div>
+      <!-- 修改 -->
+      <div>
+        <el-dialog
+          title="修改计划"
+          :visible.sync="show"
+          width="40%"
+          :destroy-on-close="true"
+          :close-on-click-modal="false"
+        >
+          <el-form :model="forma" :rules="rules" ref="ruleForma">
+            <el-form-item
+              label="计划名称："
+              :label-width="formLabelWidth"
+              prop="planName"
+            >
+              <el-input
+                size="small"
+                v-model="forma.planName"
+                placeholder="请输入计划名称"
+              ></el-input>
+            </el-form-item>
+
+            <el-form-item
+              label="考试职业："
+              :label-width="formLabelWidth"
+              prop="jobId"
+            >
+              <el-select
+                size="small"
+                v-model="forma.jobId"
+                style="width: 450px"
+                placeholder="请选择考试职业"
+                @change="ChangeData"
+              >
+                <el-option
+                  v-for="item in testSourcesList"
+                  :key="item.id"
+                  :label="item.jobCode + '-' + item.jobName"
+                  :value="item.id"
+                >
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item
+              label="考试等级："
+              :label-width="formLabelWidth"
+              prop="level"
+            >
+              <el-radio v-model="forma.level" label="1">一级</el-radio>
+              <el-radio v-model="forma.level" label="2">二级</el-radio>
+              <el-radio v-model="forma.level" label="3">三级</el-radio>
+              <el-radio v-model="forma.level" label="4">四级</el-radio>
+              <el-radio v-model="forma.level" label="5">五级</el-radio>
+            </el-form-item>
+
+            <el-form-item
+              label="考生人数："
+              :label-width="formLabelWidth"
+              prop="candidatesNumber"
+            >
+              <el-input
+                size="small"
+                type="number"
+                v-model="forma.candidatesNumber"
+                placeholder="请输入考生人数"
+              ></el-input>
+            </el-form-item>
+
+            <div class="data">
+              <div>
+                <el-form-item
+                  label="考试时间："
+                  label-width="120px"
+                  prop="startTime"
+                >
+                  <el-date-picker
+                    style="width: 200px"
+                    size="small"
+                    v-model="forma.startTime"
+                    type="datetime"
+                    placeholder="开始时间"
+                  >
+                  </el-date-picker>
+                </el-form-item>
+              </div>
+              <div>
+                <el-form-item label="-" label-width="50px" prop="endTime">
+                  <el-time-picker
+                    style="width: 200px"
+                    size="small"
+                    v-model="forma.endTime"
+                    placeholder="结束时间"
+                  >
+                  </el-time-picker>
+                </el-form-item>
+              </div>
+            </div>
+            <el-form-item
+              label="考试时长："
+              :label-width="formLabelWidth"
+              prop="duration"
+            >
+              <el-input
+                disabled
+                size="small"
+                v-model="forma.duration"
+                placeholder="考试时长"
+              ></el-input>
+            </el-form-item>
+            <el-form-item label="备注：" label-width="120px">
+              <el-input
+                resize="none"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入备注"
+                v-model="forma.remarks"
+              >
+              </el-input>
+            </el-form-item>
+          </el-form>
+          <div slot="footer" class="dialog-footer">
+            <el-button @click="cancela">取 消</el-button>
+            <el-button type="primary" @click="setDialogforma('ruleForma')"
+              >重新提交审核</el-button
+            >
+          </div>
+        </el-dialog>
+      </div>
     </div>
   </div>
 </template>
@@ -310,6 +457,10 @@
 }
 .dialog-footer {
   text-align: center;
+}
+.statu {
+  cursor: pointer;
+  text-decoration: underline;
 }
 </style>
 
@@ -372,6 +523,7 @@ export default {
         endTime: "", //结束考试时间
         duration: "", //考试时长
         remarks: "", // 备注
+        id: "", //编辑上传
       },
       testSourcesList: [],
       rules: {
@@ -401,6 +553,21 @@ export default {
         ],
       },
       formLabelWidth: "120px",
+
+      show: false,
+      forma: {
+        //表单数据
+        planName: "", //计划名称
+        jobId: "", //考试职业
+        level: "", //计划等级
+        candidatesNumber: "", //考试人数
+        startTime: "", //开始考试时间
+        endTime: "", //结束考试时间
+        duration: "", //考试时长
+        remarks: "", // 备注
+        id: "", //编辑时上传
+      },
+      tooltipText: "", //计划不通过的原因
     };
   },
   created() {
@@ -484,6 +651,83 @@ export default {
       this.dialogVisible = false;
       this.$refs.ruleForm.resetFields();
     },
+
+    edit(row) {
+      //修改
+      // console.log(row);
+      this.$api.getPlanById(row.id).then((res) => {
+        // console.log(res);
+        if (res.code == 0) {
+          let time = res.data.endTime.substring(11).split(":");
+          console.log(time);
+          this.forma.planName = res.data.planName; //计划名称
+          this.forma.jobId = res.data.jobId; //考试职业
+          this.forma.level = res.data.level.toString(); //计划等级
+          this.forma.candidatesNumber = res.data.candidatesNumber; //考试人数
+          this.forma.startTime = res.data.startTime; // 考试开始时间
+          this.forma.endTime = new Date(
+            2016,
+            9,
+            10,
+            Number(time[0]),
+            Number(time[1]),
+            Number(time[2])
+          ); //结束考试时间
+          console.log(res.data.endTime.substring(11));
+          this.forma.duration = res.data.duration; //考试时长
+          this.forma.remarks = res.data.insideReason; // 备注
+          this.forma.id = res.data.id; // 编辑时上传
+          this.show = true;
+        }
+      });
+    },
+    setDialogforma(ruleForma) {
+      //确认编辑
+      // console.log(dayjs(this.forma.endTime).format("HH:mm:ss"));
+      console.log(this.forma);
+      this.$refs[ruleForma].validate((valid) => {
+        if (valid) {
+          this.$api
+            .addPlan({
+              planName: this.forma.planName, //计划名称
+              jobId: this.forma.jobId, //考试职业
+              level: this.forma.level, //计划等级
+              candidatesNumber: this.forma.candidatesNumber, //考试人数
+              startTime: dayjs(this.forma.startTime).format(
+                "YYYY-MM-DD HH:mm:ss"
+              ), //开始考试时间
+              endTime:
+                dayjs(this.forma.startTime).format("YYYY-MM-DD") +
+                " " +
+                dayjs(this.forma.endTime).format("HH:mm:ss"), //结束考试时间
+              duration: this.forma.duration, //考试时长
+              remarks: this.forma.remarks, // 备注
+              id: this.forma.id, // 编辑时上传
+            })
+            .then((res) => {
+              if (res.code == 0) {
+                this.show = false;
+                this.$message.success("创建计划成功");
+                this.$refs.ruleForma.resetFields();
+                this.getQuery();
+              } else {
+                this.$message.error(res.msg);
+              }
+              console.log(res);
+            });
+        } else {
+          // console.log('error submit!!');
+          this.$message.error("表单填写错误");
+          return false;
+        }
+      });
+    },
+    cancela() {
+      //取消编辑
+      this.show = false;
+      this.$refs.ruleForma.resetFields();
+    },
+
     searchPlan() {
       //搜索
       this.search = this.search; //名称
@@ -501,10 +745,6 @@ export default {
       this.getQuery();
     },
 
-    edit(row) {
-      //修改
-      console.log(row);
-    },
     scrap(row) {
       //计划作废
       console.log(row);
@@ -558,7 +798,7 @@ export default {
     repeal(row) {
       //撤销审核
       console.log(row);
-            this.$confirm("此操作将永久作废该计划, 是否继续?", "提示", {
+      this.$confirm("此操作将永久作废该计划, 是否继续?", "提示", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning",
@@ -582,6 +822,35 @@ export default {
     anew(row) {
       //重新提交
       console.log(row);
+      this.$confirm("是否确认重新提交审核?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.$api.reSubmitPlan(row.id).then((res) => {
+            console.log(res);
+            if (res.code == 0) {
+              this.$message.success(res.msg);
+              this.getQuery();
+            }
+          });
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "已取消",
+          });
+        });
+    },
+    onmouseover(row) { //鼠标移入事件 查看不通过的原因
+      // console.log(row);
+      this.$api.getPlanById(row.id).then((res) => {
+        // console.log(res);
+        if(res.code == 0){
+        this.tooltipText = res.data.insideReason
+        }
+      });
     },
   },
   components: {},
@@ -604,6 +873,30 @@ export default {
             this.form.duration = "";
           } else {
             this.form.duration = parseInt(testTime / 60);
+          }
+        }
+      },
+      deep: true,
+    },
+    forma: {
+      handler(val) {
+        console.log(val);
+        if (val.startTime && val.endTime) {
+          let stareTime = dayjs(
+            dayjs(this.forma.startTime).format("YYYY-MM-DD HH:mm:ss")
+          ).unix(); //开始考试时间
+          let endTiem = dayjs(
+            dayjs(this.forma.startTime).format("YYYY-MM-DD") +
+              dayjs(this.forma.endTime).format("HH:mm:ss")
+          ).unix(); //结束时间戳
+          console.log(stareTime, endTiem);
+          let testTime = endTiem - stareTime; //考试时间
+          if (testTime < 0) {
+            this.$message.error("考试时间设置错误");
+            this.forma.duration = "";
+          } else {
+            console.log(this.forma.duration);
+            this.forma.duration = parseInt(testTime / 60);
           }
         }
       },
